@@ -26,19 +26,20 @@
 
 import numpy as np
 from math import *
+from scipy.special import wofz as wofz_scipy
 
 class TPSAad:
     #dimmax: maximum # of variables to be differentiable
     #For better performance, this number should be the # differentiable variables.
-    dimmax = 5
+    dimmax = 10
 
     def __init__(self, a=None, ivar=None):
         self.terms = self.dimmax + 1
-        self.map = np.zeros(self.terms)
+        self.map = np.zeros(self.terms, dtype=complex)
         
-        if isinstance(a, (int, float)) and ivar is None:
+        if isinstance(a, (int, float, complex)) and ivar is None:
             self.map[0] = a
-        elif isinstance(a, (int, float)) and isinstance(ivar, int):
+        elif isinstance(a, (int, float, complex)) and isinstance(ivar, int):
             self.map[0] = a
             self.map[ivar] = 1.0
 
@@ -53,7 +54,7 @@ class TPSAad:
 
     def __add__(self, other):
         result = TPSAad()
-        if isinstance(other, (int, float)):
+        if isinstance(other, (int, float, complex)):
             result.map = self.map.copy()
             result.map[0] += other
         else:
@@ -65,7 +66,7 @@ class TPSAad:
 
     def __sub__(self, other):
         result = TPSAad()
-        if isinstance(other, (int, float)):
+        if isinstance(other, (int, float, complex)):
             result.map = self.map.copy()
             result.map[0] -= other
         else:
@@ -74,14 +75,14 @@ class TPSAad:
 
     def __rsub__(self, other):
         result = TPSAad()
-        if isinstance(other, (int, float)):
+        if isinstance(other, (int, float, complex)):
             result.map = -self.map
             result.map[0] = other - self.map[0]
         return result
 
     def __mul__(self, other):
         result = TPSAad()
-        if isinstance(other, (int, float)):
+        if isinstance(other, (int, float, complex)):
             result.map = self.map * other
         else:
             result.map[0] = self.map[0] * other.map[0]
@@ -94,12 +95,12 @@ class TPSAad:
 
     def __truediv__(self, other):
         result = TPSAad()
-        if isinstance(other, (int, float)):
-            if abs(other) < 1e-14:
+        if isinstance(other, (int, float, complex)):
+            if np.abs(other) < 1e-24:
                 raise ValueError("Division by zero")
             result.map = self.map / other
         else:
-            if abs(other.map[0]) < 1e-14:
+            if np.abs(other.map[0]) < 1e-24:
                 raise ValueError("Division by zero")
             result.map[0] = self.map[0] / other.map[0]
             for i in range(1, self.terms):
@@ -108,7 +109,7 @@ class TPSAad:
 
     def __rtruediv__(self, other):
         result = TPSAad()
-        if abs(self.map[0]) < 1e-14:
+        if np.abs(self.map[0]) < 1e-24:
             raise ValueError("Division by zero")
         result.map[0] = other / self.map[0]
         for i in range(1, self.terms):
@@ -120,10 +121,32 @@ class TPSAad:
         result.map = -self.map
         return result
 
+    def __gt__(self, other):
+        val = other.map[0] if isinstance(other, TPSAad) else other
+        left = self.map[0].real if hasattr(self.map[0], "real") else self.map[0]
+        right = val.real if hasattr(val, "real") else val
+
+        return left > right
+ 
+    def __lt__(self, other):
+        val = other.map[0] if isinstance(other, TPSAad) else other
+        left = self.map[0].real if hasattr(self.map[0], "real") else self.map[0]
+        right = val.real if hasattr(val, "real") else val
+
+        return left < right
+    
     @property
     def tpsaval(self):
         return self.map[0]
 
+    @property
+    def real(self):
+        return self.map[0].real
+
+    @property
+    def imag(self):
+        return self.map[0].imag
+    
 # Mathematical functions
 def sin(M):
     result = TPSAad()
@@ -221,7 +244,7 @@ def log(M):
     Raises:
         ValueError: if argument is zero or negative
     """
-    if abs(M.map[0]) < 1.0e-15:
+    if np.abs(M.map[0]) < 1.0e-15:
         raise ValueError("Zero in log function")
 
     result = TPSAad()
@@ -274,9 +297,9 @@ def pow(M, a):
             return result
 
     elif isinstance(a, float):
-        if abs(a-1) < 1e-14:
+        if np.abs(a-1) < 1e-14:
             return result
-        elif abs(a) < 1e-14:
+        elif np.abs(a) < 1e-14:
             result.map[:] = 0.0
             result.map[0] = 1.0
             return result
@@ -384,7 +407,7 @@ def atanh(M):
     Raises:
         ValueError: if argument is outside (-1, 1)
     """
-    if abs(M.map[0]) >= 1:
+    if np.abs(M.map[0]) >= 1:
         raise ValueError("Argument of atanh must be in (-1, 1)")
         
     result = TPSAad()
@@ -393,4 +416,34 @@ def atanh(M):
     for i in range(1, M.terms):
         result.map[i] = M.map[i] / (1 - M.map[0]**2)
     return result
+
+def wofz(M):
+    """
+    Faddeeva (complex error function).
+    Takes one evaluation of the standard Faddeeva.
+    
+    Args:
+        M: TPSAad object
+    Returns:
+        TPSAad object
+    """
+  
+    result = TPSAad()
+    result.map = M.map.copy()
+    
+    # the value itself
+    result.map[0] = wofz_scipy(M.map[0])
+    
+    # partial derivatives with chain rule
+    for i in range(1, M.terms):
+        result.map[i] = M.map[i] * (2j/np.sqrt(pi) - 2*M.map[0]*result.map[0])
+    return result
+
+def abs(M):
+    result = TPSAad()
+    result.map[0] = np.abs(M.map[0])
+    for i in range(1, M.terms):
+        result.map[i] = np.sign(M.map[0]) * M.map[i]
+    return result
+
 # Add other mathematical functions (tan, sinh, cosh, etc.) similarly...
