@@ -141,11 +141,15 @@ class TPSAad:
 
     @property
     def real(self):
-        return self.map[0].real
+        res = TPSAad()
+        res.map = self.map.real
+        return res
 
     @property
     def imag(self):
-        return self.map[0].imag
+        res = TPSAad()
+        res.map = self.map.imag
+        return res
     
 # Mathematical functions
 def sin(M):
