@@ -18,20 +18,27 @@ Software to reproduce, distribute copies to the public, prepare derivative
 works, and perform publicly and display publicly, and to permit others to do so.
 
 ****************************
-This package includes a AD module/class implemented using 5 programing languages:
-Fortran, C++, Java, Python, Julia.
-To use this module, the noraml variables (e.g. double) should be declared as
-the AD variable. 
+This package contains an effective Automatic Differentiation (AD) module/class, 
+which has been implemented in five programming languages: Fortran, C++, Java, Python, and Julia. 
+The package aims to provide transparency and simplicity for integrating auto-differentiation 
+into various applications. Each programming implementation class comprises only a few hundred
+lines of code. To utilize this module, some standard variables must 
+be declared as AD variables.
 
-NOTE: for each application the variable "dimmax" in the module should be set to the number
-of variables to be differentiated!! 
-There are 3 examples implemented using 5 languages so that users can see how the module
-is used.
+Please note that for each application, the `dimmax` variable within the module must
+be set to the total number of variables intended for differentiation. We have included
+three examples, implemented in all five languages, to demonstrate how to use the module effectively.
 ****************************
 Contact: Ji Qiang (jqiang@lbl.gov)
 ****************************
 Citation:
+
 J. Qiang, Y. Hao, A. Qiang, J. Wan, “A module for fast auto differentiable simulations” in Proc. of IPAC25, WEBN2, p.1671, 2025. 
+
+J. Qiang, Y. Hao, A. Qiang, J. Wan, "A multi-language auto-differentiation module and 
+its application to a parallel particle-in-cell code on distributed computers",
+https://arxiv.org/pdf/2511.21839
+
 
 
 
