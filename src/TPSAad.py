@@ -31,7 +31,7 @@ from scipy.special import wofz as wofz_scipy
 class TPSAad:
     #dimmax: maximum # of variables to be differentiable
     #For better performance, this number should be the # differentiable variables.
-    dimmax = 10
+    dimmax = 4
 
     def __init__(self, a=None, ivar=None):
         self.terms = self.dimmax + 1
@@ -84,7 +84,7 @@ class TPSAad:
         result = TPSAad()
         if isinstance(other, (int, float, complex)):
             result.map = self.map * other
-        else:
+        elif isinstance(other, TPSAad):
             result.map[0] = self.map[0] * other.map[0]
             for i in range(1, self.terms):
                 result.map[i] = other.map[0]*self.map[i] + self.map[0]*other.map[i]
@@ -450,4 +450,47 @@ def abs(M):
         result.map[i] = np.sign(M.map[0]) * M.map[i]
     return result
 
+def scale_vector(s, V):
+    """Multiplies a TPSAad scalar 's' with a 1D vector 'V' of TPSAad scalar objects
+
+    (or numeric scalars).
+
+    Args:
+        s: TPSAad object or scalar (float/int/complex)
+        V: 1D iterable / NumPy array of TPSAad objects or numbers
+
+    Returns:
+        np.ndarray: 1D NumPy array of object dtype containing the scaled TPSAad elements.
+    """
+    V_arr = np.asarray(V, dtype=object)
+
+    if V_arr.ndim != 1:
+        raise ValueError(f"Expected a 1D vector for V, got shape {V_arr.shape}")
+
+    result = np.empty_like(V_arr, dtype=object)
+    for i in range(len(V_arr)):
+        result[i] = s * V_arr[i] # this invokes the __mul__ of this class
+
+    return result
+
+def dot(M, N):
+    """1D vector dot product for TPSAad objects.
+
+    Args:
+        M, N: 1D iterable sequences (lists, tuples, or 1D NumPy arrays)
+              containing TPSAad objects or numbers.
+
+    Returns:
+        TPSAad: The resulting scalar TPSAad object.
+    """
+    if len(M) != len(N):
+        raise ValueError(
+            f"Vector dimension mismatch: len(M)={len(M)} != len(N)={len(N)}"
+        )
+
+    result = M[0] * N[0]
+    for i in range(1, len(M)):
+        result = result + (M[i] * N[i])
+
+    return result
 # Add other mathematical functions (tan, sinh, cosh, etc.) similarly...
